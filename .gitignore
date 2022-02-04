@@ -1,2 +1,4 @@
-fldr/ignored-file.txt
-fldr/ignored-dir/
+demo/demo
+demo/emyzelium.o
+.vscode/
+metadata.txt
