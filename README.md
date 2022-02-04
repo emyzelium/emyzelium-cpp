@@ -10,4 +10,4 @@ More changes in new branch.
 
 ## Heading with anchor <a name="gohere"></a>
 
-Actually...
+Actually... *formatting* must work, **also**.
