@@ -1,4 +1,4 @@
-# Emyzelium (C++)
+# ![logo disk](https://github.com/emyzelium/visuals/blob/main/logo_disk_32.png) Emyzelium (C++)
 
 ## Synopsis
 
