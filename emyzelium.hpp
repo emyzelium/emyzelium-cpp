@@ -1,7 +1,7 @@
 /*
  * Emyzelium (C++)
  *
- * Emyzelium is another gigathin wrapper around ZeroMQ's Publish-Subscribe and
+ * This is another gigathin wrapper around ZeroMQ's Publish-Subscribe and
  * Pipeline messaging patterns with mandatory Curve security and optional ZAP
  * authentication filter over TCP/IP for distributed artificial elife,
  * decision making etc. systems where each peer, identified by its public key,
@@ -39,9 +39,9 @@
 
 
 #include <cstdint>
-#include <map>
+#include <unordered_map>
 #include <string>
-#include <set>
+#include <unordered_set>
 #include <tuple>
 #include <vector>
 
@@ -60,8 +60,8 @@ namespace typeAliases {
 using namespace typeAliases;
 
 
-const string VERSION = "0.7.0";
-const string DATE = "2022.02.04";
+const string VERSION = "0.7.2";
+const string DATE = "2022.02.13";
 
 enum class EW {
 	Ok,
@@ -106,8 +106,8 @@ class Ehypha {
 	zsocket* subsock;
 	int64_t ecatal_forget_interval;
 	string connpoint;
-	map<string, tuple<string, int64_t>> connpoints_via_ecatals;
-	map<string, Etale> etales;
+	unordered_map<string, tuple<string, int64_t>> connpoints_via_ecatals;
+	unordered_map<string, Etale> etales;
 
 	void update_connpoint_via_ecatal(const string& ecatal_publickey, const string& connpoint, const int64_t t);
 	void remove_connpoint_via_ecatal(const string& ecatal_publickey);
@@ -139,27 +139,27 @@ public:
 class Efunguz {
 	string secretkey;
 	string publickey;
-	set<string> whitelist_publickeys;
+	unordered_set<string> whitelist_publickeys;
 	uint16_t pubsub_port;
 	int64_t beacon_interval;
 	int64_t t_last_beacon;
 	int64_t ecatal_forget_interval;
-	map<string, Ehypha> ehyphae;
+	unordered_map<string, Ehypha> ehyphae;
 	zcontext* context;
 	zsocket* zapsock;
 	zsocket* pubsock;
-	map<string, zsocket*> ecatals_from;
-	map<string, zsocket*> ecatals_to;
+	unordered_map<string, zsocket*> ecatals_from;
+	unordered_map<string, zsocket*> ecatals_to;
 
 public:
 	// Owns context and sockets, so cannot be copied
 	Efunguz(const Efunguz&) = delete;
 	Efunguz& operator=(const Efunguz&) = delete;
 
-	Efunguz(const string& secretkey, const set<string>& whitelist_publickeys={}, const uint16_t pubsub_port=DEF_EFUNGI_PUBSUB_PORT, const int64_t beacon_interval=DEF_EFUNGI_BEACON_INTERVAL, const int64_t ecatal_forget_interval=DEF_EFUNGI_ECATAL_FORGET_INTERVAL);
+	Efunguz(const string& secretkey, const unordered_set<string>& whitelist_publickeys=unordered_set<string>{}, const uint16_t pubsub_port=DEF_EFUNGI_PUBSUB_PORT, const int64_t beacon_interval=DEF_EFUNGI_BEACON_INTERVAL, const int64_t ecatal_forget_interval=DEF_EFUNGI_ECATAL_FORGET_INTERVAL);
 
-	void add_whitelist_publickeys(const set<string>& publickeys);
-	void del_whitelist_publickeys(const set<string>& publickeys);
+	void add_whitelist_publickeys(const unordered_set<string>& publickeys);
+	void del_whitelist_publickeys(const unordered_set<string>& publickeys);
 
 	tuple<Ehypha&, EW> add_ehypha(const string& that_publickey, const string& connpoint="", const int64_t ecatal_forget_interval=0);
 	EW del_ehypha(const string& that_publickey);
@@ -182,9 +182,9 @@ public:
 class Ecataloguz {
 	string secretkey;
 	string publickey;
-	set<string> beacon_whitelist_publickeys;
-	set<string> pubsub_whitelist_publickeys;
-	map<string, tuple<string, int64_t, string>> beacon_recs; // publickey -> {connpoint, beacon_time, comment}
+	unordered_set<string> beacon_whitelist_publickeys;
+	unordered_set<string> pubsub_whitelist_publickeys;
+	unordered_map<string, tuple<string, int64_t, string>> beacon_recs; // publickey -> {connpoint, beacon_time, comment}
 	uint16_t beacon_port;
 	uint16_t pubsub_port;
 	int64_t deactivate_interval;
@@ -200,7 +200,7 @@ public:
 	Ecataloguz(const Ecataloguz&) = delete;
 	Ecataloguz& operator=(const Ecataloguz&) = delete;
 
-	Ecataloguz(const string& secretkey, const map<string, string>& beacon_whitelist_publickeys_with_comments={}, const set<string>& pubsub_whitelist_publickeys={}, const uint16_t beacon_port=DEF_ECATAL_BEACON_PORT, const uint16_t pubsub_port=DEF_ECATAL_PUBSUB_PORT, const int64_t deactivate_interval=DEF_ECATAL_DEACTIVATE_INTERVAL, const int64_t publish_interval=DEF_ECATAL_PUBLISH_INTERVAL, const int64_t idle_interval=DEF_ECATAL_IDLE_INTERVAL);
+	Ecataloguz(const string& secretkey, const unordered_map<string, string>& beacon_whitelist_publickeys_with_comments=unordered_map<string, string>{}, const unordered_set<string>& pubsub_whitelist_publickeys=unordered_set<string>{}, const uint16_t beacon_port=DEF_ECATAL_BEACON_PORT, const uint16_t pubsub_port=DEF_ECATAL_PUBSUB_PORT, const int64_t deactivate_interval=DEF_ECATAL_DEACTIVATE_INTERVAL, const int64_t publish_interval=DEF_ECATAL_PUBLISH_INTERVAL, const int64_t idle_interval=DEF_ECATAL_IDLE_INTERVAL);
 
 	EW read_beacon_whitelist_publickeys_with_comments(string filepath);
 	EW read_pubsub_whitelist_publickeys(string filepath);

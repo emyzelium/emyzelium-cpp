@@ -2,15 +2,17 @@
 
 ## Synopsis
 
-Emyzelium is another gigathin wrapper around [ZeroMQ](https://zeromq.org/)'s [Publish-Subscribe](https://zeromq.org/socket-api/#publish-subscribe-pattern) and [Pipeline](https://zeromq.org/socket-api/#pipeline-pattern) messaging patterns with mandatory [Curve](https://rfc.zeromq.org/spec/26/) security and optional [ZAP](https://rfc.zeromq.org/spec/27/) authentication filter over TCP/IP for distributed artificial elife, decision making etc. systems where each peer, identified by its public key, provides and updates vectors of vectors of bytes under unique topics that other peers can subscribe to and receive; peers obtain each other's IP addresses:ports by sending beacons and subscribing to nameservers whose addresses:ports are known.
+This is another gigathin wrapper around [ZeroMQ](https://zeromq.org/)'s [Publish-Subscribe](https://zeromq.org/socket-api/#publish-subscribe-pattern) and [Pipeline](https://zeromq.org/socket-api/#pipeline-pattern) messaging patterns with mandatory [Curve](https://rfc.zeromq.org/spec/26/) security and optional [ZAP](https://rfc.zeromq.org/spec/27/) authentication filter over TCP/IP for distributed artificial elife, decision making etc. systems where each peer, identified by its public key, provides and updates vectors of vectors of bytes under unique topics that other peers can subscribe to and receive; peers obtain each other's IP addresses:ports by sending beacons and subscribing to nameservers whose addresses:ports are known.
 
-Requires [C++14 compiler support](https://en.wikipedia.org/wiki/C%2B%2B14#Compiler_support) and, of course, [libzmq](https://github.com/zeromq/libzmq) ([more on build](http://wiki.zeromq.org/build:_start)). Nameserver *with* TUI requires [ncurses](https://invisible-island.net/ncurses/announce.html), *without* TUI it does not. Demo requires [ncursesw](https://packages.ubuntu.com/bionic/libncursesw5-dev).
+Requires [C++11 compiler support](https://en.cppreference.com/w/cpp/compiler_support#References) and, of course, [libzmq](https://github.com/zeromq/libzmq) ([more on build](http://wiki.zeromq.org/build:_start)). Nameserver *with* TUI requires [ncurses](https://invisible-island.net/ncurses/announce.html), *without* TUI it does not. Demo requires [ncursesw](https://packages.ubuntu.com/bionic/libncursesw5-dev).
 
 Versions in other languages: [Python](https://github.com/emyzelium/emyzelium-py).
 
 ## Warning
 
 There are tasks and scales where this model may succeed, seemingly (starting with pet-project-grade ones), and then there are tasks and scales where it will fail, miserably (ending with industry-, and especially critical-infrastructure-grade ones), up to the international day of mourning for its victims. Proceed with caution.
+
+See also [mycoses](https://en.wikipedia.org/wiki/Fungal_infection).
 
 ## Demo
 

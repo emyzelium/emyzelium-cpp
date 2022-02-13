@@ -1,7 +1,7 @@
 /*
  * Emyzelium (C++)
  *
- * Emyzelium is another gigathin wrapper around ZeroMQ's Publish-Subscribe and
+ * This is another gigathin wrapper around ZeroMQ's Publish-Subscribe and
  * Pipeline messaging patterns with mandatory Curve security and optional ZAP
  * authentication filter over TCP/IP for distributed artificial elife,
  * decision making etc. systems where each peer, identified by its public key,
@@ -39,8 +39,9 @@
 #include <cstdio>
 #include <cstring>
 #include <ncurses.h>
-#include <sstream>
 #include <random>
+#include <set>
+#include <sstream>
 #include <thread>
 
 
@@ -177,7 +178,7 @@ class Realm_CA {
 	int cursor_x;
 
 public:
-	Realm_CA(const string& name, const string& secretkey, const set<string>& whitelist_publickeys, const uint16_t pubport, const int height, const int width, const set<int>& birth, const set<int>& survival, const double autoemit_interval=4.0, const int framerate=30)
+	Realm_CA(const string& name, const string& secretkey, const unordered_set<string>& whitelist_publickeys, const uint16_t pubport, const int height, const int width, const set<int>& birth, const set<int>& survival, const double autoemit_interval=4.0, const int framerate=30)
 	: name {name}, width {width}, birth {birth}, survival {survival}, autoemit_interval {autoemit_interval}, framerate {framerate} {
 		this->efunguz = new Emyzelium::Efunguz(secretkey, whitelist_publickeys, pubport);
 		this->height = (height >> 1) << 1;
@@ -197,7 +198,7 @@ public:
 		auto& ehypha = get<0>(this->efunguz->add_ehypha(publickey, connpoint));
 		auto& selfdesc = get<0>(ehypha.add_etale(""));
 		auto& zone = get<0>(ehypha.add_etale("zone"));
-		this->others.push_back({name + "'s", selfdesc, zone});
+		this->others.push_back(tuple<const string, const Emyzelium::Etale&, const Emyzelium::Etale&>{name + "'s", selfdesc, zone});
 	}
 
 
@@ -553,7 +554,7 @@ int run_realm(string name, string ecatal_ip="") {
 	int height = (LINES - 8) << 1; // even
 	int width = COLS - 2;
 
-	Realm_CA realm(thisname, secretkey, {}, pubport, height, width, birth, survival);
+	Realm_CA realm(thisname, secretkey, unordered_set<string>{}, pubport, height, width, birth, survival);
 
 	realm.add_other(that1_name, that1_publickey);
 	realm.add_other(that2_name, that2_publickey);
@@ -585,13 +586,13 @@ int run_ecatal(string name) {
 		ecatal.run();
 	} else if (name == "B") {
 		Emyzelium::Ecataloguz ecatal("+f(o9nJE%H4[f?Z7eZ!>j[+>WVx0EkDVUYbw[B^8",
-		{{"iGxlt)JYh!P9xPCY%BlY4Y]c^<=W)k^$T7GirF[R", "Alien"}, {"(>?aRHs!hJ2ykb?B}t6iGgo3-5xooFh@9F/4C:DW", "John"}, {"WR)%3-d9dw)%3VQ@O37dVe<09FuNzI{vh}Vfi+]0", "Mary"}}, {},
+		{{"iGxlt)JYh!P9xPCY%BlY4Y]c^<=W)k^$T7GirF[R", "Alien"}, {"(>?aRHs!hJ2ykb?B}t6iGgo3-5xooFh@9F/4C:DW", "John"}, {"WR)%3-d9dw)%3VQ@O37dVe<09FuNzI{vh}Vfi+]0", "Mary"}}, unordered_set<string>{},
 		Emyzelium::DEF_ECATAL_BEACON_PORT + 2, Emyzelium::DEF_ECATAL_PUBSUB_PORT + 2,
 		60000000, 1000000, 100000);
 		ecatal.run();
 	} else if (name == "C") {
 		Emyzelium::Ecataloguz ecatal("ap:W}bEN0@@>9^>ZcYNDP?Xc6JC8mIIbMw@-zV@c",
-		{}, {},
+		unordered_map<string, string>{}, unordered_set<string>{},
 		Emyzelium::DEF_ECATAL_BEACON_PORT + 3, Emyzelium::DEF_ECATAL_PUBSUB_PORT + 3,
 		60000000, 1000000, 100000);
 		ecatal.read_beacon_whitelist_publickeys_with_comments("publickeys_with_comments.txt");

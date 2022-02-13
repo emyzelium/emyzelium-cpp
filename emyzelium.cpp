@@ -1,7 +1,7 @@
 /*
  * Emyzelium (C++)
  *
- * Emyzelium is another gigathin wrapper around ZeroMQ's Publish-Subscribe and
+ * This is another gigathin wrapper around ZeroMQ's Publish-Subscribe and
  * Pipeline messaging patterns with mandatory Curve security and optional ZAP
  * authentication filter over TCP/IP for distributed artificial elife,
  * decision making etc. systems where each peer, identified by its public key,
@@ -218,9 +218,13 @@ void Ehypha::set_connpoint(const string& connpoint) {
 
 
 void Ehypha::update_connpoint_via_ecatal(const string& ecatal_publickey, const string& connpoint, const int64_t t) {
-	// Yeah, this-> is redundant here, unlike set_connpoint(). But 1st version was in Python...
-	this->connpoints_via_ecatals.erase(ecatal_publickey);
-	this->connpoints_via_ecatals.insert({ecatal_publickey, {connpoint, t}});
+	tuple<string, int64_t> cp_t{connpoint, t};
+	// Yeah, this-> is redundant here, unlike in set_connpoint(). But 1st version was in Python...
+	if (this->connpoints_via_ecatals.count(ecatal_publickey) == 1) {
+		this->connpoints_via_ecatals.at(ecatal_publickey) = cp_t;
+	} else {
+		this->connpoints_via_ecatals.insert({ecatal_publickey, cp_t});
+	}
 }
 
 
@@ -316,7 +320,7 @@ void Ehypha::resume_etales() {
 void Ehypha::update() {
 	int64_t t = time_musec();
 
-	map<string, int> connpoints_votes = {};
+	unordered_map<string, int> connpoints_votes{};
 	for (const auto& keyval : this->connpoints_via_ecatals) {
 		const auto& cp = get<0>(keyval.second);
 		const auto& t_upd = get<1>(keyval.second);
@@ -373,7 +377,7 @@ Ehypha::~Ehypha() {
 }
 
 
-Efunguz::Efunguz(const string& secretkey, const set<string>& whitelist_publickeys, const uint16_t pubsub_port, const int64_t beacon_interval, const int64_t ecatal_forget_interval)
+Efunguz::Efunguz(const string& secretkey, const unordered_set<string>& whitelist_publickeys, const uint16_t pubsub_port, const int64_t beacon_interval, const int64_t ecatal_forget_interval)
 : pubsub_port {pubsub_port}, beacon_interval {beacon_interval}, ecatal_forget_interval {ecatal_forget_interval} {
 	this->secretkey = cut_pad_str(secretkey, KEY_Z85_LEN);
 
@@ -404,14 +408,14 @@ Efunguz::Efunguz(const string& secretkey, const set<string>& whitelist_publickey
 }
 
 
-void Efunguz::add_whitelist_publickeys(const set<string>& publickeys) {
+void Efunguz::add_whitelist_publickeys(const unordered_set<string>& publickeys) {
 	for (const auto& key : publickeys) {
 		this->whitelist_publickeys.insert(cut_pad_str(key, KEY_Z85_LEN));
 	}
 }
 
 
-void Efunguz::del_whitelist_publickeys(const set<string>& publickeys) {
+void Efunguz::del_whitelist_publickeys(const unordered_set<string>& publickeys) {
 	for (const auto& key : publickeys) {
 		this->whitelist_publickeys.erase(cut_pad_str(key, KEY_Z85_LEN));
 	}
@@ -639,7 +643,7 @@ Efunguz::~Efunguz() {
 }
 
 
-Ecataloguz::Ecataloguz(const string& secretkey, const map<string, string>& beacon_whitelist_publickeys_with_comments, const set<string>& pubsub_whitelist_publickeys, const uint16_t beacon_port, const uint16_t pubsub_port, const int64_t deactivate_interval, const int64_t publish_interval, const int64_t idle_interval)
+Ecataloguz::Ecataloguz(const string& secretkey, const unordered_map<string, string>& beacon_whitelist_publickeys_with_comments, const unordered_set<string>& pubsub_whitelist_publickeys, const uint16_t beacon_port, const uint16_t pubsub_port, const int64_t deactivate_interval, const int64_t publish_interval, const int64_t idle_interval)
 : beacon_port {beacon_port}, pubsub_port {pubsub_port}, deactivate_interval {deactivate_interval}, publish_interval {publish_interval}, idle_interval {idle_interval} {
 	this->secretkey = cut_pad_str(secretkey, KEY_Z85_LEN);
 
@@ -650,7 +654,7 @@ Ecataloguz::Ecataloguz(const string& secretkey, const map<string, string>& beaco
 	for (const auto& keyval : beacon_whitelist_publickeys_with_comments) {
 		string dkey = cut_pad_str(keyval.first, KEY_Z85_LEN);
 		this->beacon_whitelist_publickeys.insert(dkey);
-		this->beacon_recs.insert({dkey, {"", -1, keyval.second}});
+		this->beacon_recs.insert({dkey, tuple<string, int64_t, string>{"", -1, keyval.second}});
 	}
 	for (const auto& key : pubsub_whitelist_publickeys) {
 		this->pubsub_whitelist_publickeys.insert(cut_pad_str(key, KEY_Z85_LEN));
@@ -688,7 +692,7 @@ EW Ecataloguz::read_beacon_whitelist_publickeys_with_comments(string filepath) {
 			string key = line.substr(0, KEY_Z85_LEN);
 			string comment = (line.size() >= (KEY_Z85_LEN + 2)) ? line.substr(KEY_Z85_LEN + 1) : ""; // " " or "\t" after key, then non-empty comment
 			this->beacon_whitelist_publickeys.insert(key);
-			this->beacon_recs.insert({key, {"", -1, comment}});
+			this->beacon_recs.insert({key, tuple<string, int64_t, string>{"", -1, comment}});
 		}
 	}
 	return EW::Ok;
@@ -801,11 +805,11 @@ void Ecataloguz::run() {
 				uint16_t port = *((uint16_t *)parts[0].data());
 				string connpoint = string("tcp://") + ip + ":" + to_string(port);
 				if (this->beacon_recs.count(key) == 1) {
-					string comment = get<2>(this->beacon_recs.at(key));
-					this->beacon_recs.erase(key);
-					this->beacon_recs.insert({key, {connpoint, t, comment}});
+					auto& rec = this->beacon_recs.at(key);
+					auto comment = get<2>(rec);
+					rec = tuple<string, int64_t, string>{connpoint, t, comment};
 				} else {
-					this->beacon_recs.insert({key, {connpoint, t, ""}});
+					this->beacon_recs.insert({key, tuple<string, int64_t, string>{connpoint, t, ""}});
 				}
 			}
 		}
@@ -817,7 +821,7 @@ void Ecataloguz::run() {
 				auto comment = get<2>(keyval.second);
 				if ((this->deactivate_interval > 0) && (t - t_last_beac > this->deactivate_interval)) {
 					connpoint = "";
-					this->beacon_recs.at(keyval.first) = {connpoint, t_last_beac, comment};
+					this->beacon_recs.at(keyval.first) = tuple<string, int64_t, string>{connpoint, t_last_beac, comment};
 				}
 				if (!connpoint.empty()) {
 					vector<vector<uint8_t>> msg_parts{};
