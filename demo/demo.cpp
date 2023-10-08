@@ -1,20 +1,19 @@
 /*
  * Emyzelium (C++)
  *
- * This is another gigathin wrapper around ZeroMQ's Publish-Subscribe and
- * Pipeline messaging patterns with mandatory Curve security and optional ZAP
- * authentication filter over TCP/IP for distributed artificial elife,
- * decision making etc. systems where each peer, identified by its public key,
- * provides and updates vectors of vectors of bytes under unique topics that
- * other peers can subscribe to and receive; peers obtain each other's
- * IP addresses:ports by sending beacons and subscribing to nameservers whose
- * addresses:ports are known.
+ * is another wrapper around ZeroMQ's Publish-Subscribe messaging pattern
+ * with mandatory Curve security and optional ZAP authentication filter
+ * over Tor, using Tor SOCKS5 proxy,
+ * for distributed artificial elife, decision making etc. systems where
+ * each peer, identified by its onion address, port, and public key,
+ * provides and updates vectors of vectors of bytes
+ * under unique topics that other peers can subscribe to and receive.
  * 
  * https://github.com/emyzelium/emyzelium-cpp
  * 
  * emyzelium@protonmail.com
  * 
- * Copyright (c) 2022 Emyzelium caretakers
+ * Copyright (c) 2022-2023 Emyzelium caretakers
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,6 +42,25 @@
 #include <set>
 #include <sstream>
 #include <thread>
+
+
+// Of course, person_SECRETKEY should be known only to that person
+// Here they are "revealed" at once for demo purpose
+
+const string ALIEN_SECRETKEY = "gr6Y.04i(&Y27ju0g7m0HvhG0:rDmx<Y[FvH@*N(";
+const string ALIEN_PUBLICKEY = "iGxlt)JYh!P9xPCY%BlY4Y]c^<=W)k^$T7GirF[R";
+const string ALIEN_ONION = "PLACEHOLDER PLACEHOLDER PLACEHOLDER PLACEHOLDER PLACEHOL"; // from service_dir/hostname, without .onion
+const uint16_t ALIEN_PORT = 60847;
+
+const string JOHN_SECRETKEY = "gbMF0ZKztI28i6}ax!&Yw/US<CCA9PLs.Osr3APc";
+const string JOHN_PUBLICKEY = "(>?aRHs!hJ2ykb?B}t6iGgo3-5xooFh@9F/4C:DW";
+const string JOHN_ONION = "PLACEHOLDER PLACEHOLDER PLACEHOLDER PLACEHOLDER PLACEHOL"; // from service_dir/hostname, without .onion
+const uint16_t JOHN_PORT = 60848;
+
+const string MARY_SECRETKEY = "7C*zh5+-8jOI[+^sh[dbVnW{}L!A&7*=j/a*h5!Y";
+const string MARY_PUBLICKEY = "WR)%3-d9dw)%3VQ@O37dVe<09FuNzI{vh}Vfi+]0";
+const string MARY_ONION = "PLACEHOLDER PLACEHOLDER PLACEHOLDER PLACEHOLDER PLACEHOL"; // from service_dir/hostname, without .onion
+const uint16_t MARY_PORT = 60849;
 
 
 int64_t time_musec() {
@@ -194,21 +212,11 @@ public:
 	}
 
 
-	void add_other(const string& name, const string& publickey, const string& connpoint="") {
-		auto& ehypha = get<0>(this->efunguz->add_ehypha(publickey, connpoint));
+	void add_other(const string& name, const string& publickey, const string& onion, const uint16_t port) {
+		auto& ehypha = get<0>(this->efunguz->add_ehypha(publickey, onion, port));
 		auto& selfdesc = get<0>(ehypha.add_etale(""));
 		auto& zone = get<0>(ehypha.add_etale("zone"));
 		this->others.push_back(tuple<const string, const Emyzelium::Etale&, const Emyzelium::Etale&>{name + "'s", selfdesc, zone});
-	}
-
-
-	void add_ecatal(const string& publickey, const bool is_to, const string& beacon_connpoint, const bool is_from, const string& pubsub_connpoint) {
-		if (is_to) {
-			this->efunguz->add_ecatal_to(publickey, beacon_connpoint);
-		}
-		if (is_from) {
-			this->efunguz->add_ecatal_from(publickey, pubsub_connpoint);
-		}
 	}
 
 
@@ -505,43 +513,59 @@ public:
 };
 
 
-int run_realm(string name, string ecatal_ip="") {
+int run_realm(string name) {
 	string thisname = name + "'s";
 
 	string secretkey("");
 	uint16_t pubport = 0;
 	string that1_name("");
 	string that1_publickey("");
+	string that1_onion("");
+	uint16_t that1_port = 0;
 	string that2_name("");
 	string that2_publickey("");
+	string that2_onion("");
+	uint16_t that2_port = 0;
 	set<int> birth{};
 	set<int> survival{};
 
 	if (name == "Alien") {
-		secretkey = "gr6Y.04i(&Y27ju0g7m0HvhG0:rDmx<Y[FvH@*N(";
-		pubport = Emyzelium::DEF_EFUNGI_PUBSUB_PORT + 1;
+		secretkey = ALIEN_SECRETKEY;
+		pubport = ALIEN_PORT;
 		that1_name = "John";
-		that1_publickey = "(>?aRHs!hJ2ykb?B}t6iGgo3-5xooFh@9F/4C:DW";
+		that1_publickey = JOHN_PUBLICKEY;
+		that1_onion = JOHN_ONION;
+		that1_port = JOHN_PORT;
 		that2_name = "Mary";
-		that2_publickey = "WR)%3-d9dw)%3VQ@O37dVe<09FuNzI{vh}Vfi+]0";
+		that2_publickey = MARY_PUBLICKEY;
+		that2_onion = MARY_ONION;
+		that2_port = MARY_PORT;
 		birth = {3, 4};
 		survival = {3, 4}; // 3-4 Life
 	} else if (name == "John") {
-		secretkey = "gbMF0ZKztI28i6}ax!&Yw/US<CCA9PLs.Osr3APc";
-		pubport = Emyzelium::DEF_EFUNGI_PUBSUB_PORT + 2;
+		secretkey = JOHN_SECRETKEY;
+		pubport = JOHN_PORT;
 		that1_name = "Alien";
-		that1_publickey = "iGxlt)JYh!P9xPCY%BlY4Y]c^<=W)k^$T7GirF[R";
+		that1_publickey = ALIEN_PUBLICKEY;
+		that1_onion = ALIEN_ONION;
+		that1_port = ALIEN_PORT;
 		that2_name = "Mary";
-		that2_publickey = "WR)%3-d9dw)%3VQ@O37dVe<09FuNzI{vh}Vfi+]0";
+		that2_publickey = MARY_PUBLICKEY;
+		that2_onion = MARY_ONION;
+		that2_port = MARY_PORT;
 		birth = {3};
 		survival = {2, 3}; // classic Conway's Life
 	} else if (name == "Mary") {
-		secretkey = "7C*zh5+-8jOI[+^sh[dbVnW{}L!A&7*=j/a*h5!Y";
-		pubport = Emyzelium::DEF_EFUNGI_PUBSUB_PORT + 3;
+		secretkey = MARY_SECRETKEY;
+		pubport = MARY_PORT;
 		that1_name = "Alien";
-		that1_publickey = "iGxlt)JYh!P9xPCY%BlY4Y]c^<=W)k^$T7GirF[R";
+		that1_publickey = ALIEN_PUBLICKEY;
+		that1_onion = ALIEN_ONION;
+		that1_port = ALIEN_PORT;
 		that2_name = "John";
-		that2_publickey = "(>?aRHs!hJ2ykb?B}t6iGgo3-5xooFh@9F/4C:DW";
+		that2_publickey = JOHN_PUBLICKEY;
+		that2_onion = JOHN_ONION;
+		that2_port = JOHN_PORT;
 		birth = {3};
 		survival = {2, 3}; // classic Conway's Life
 	} else {
@@ -556,16 +580,8 @@ int run_realm(string name, string ecatal_ip="") {
 
 	Realm_CA realm(thisname, secretkey, unordered_set<string>{}, pubport, height, width, birth, survival);
 
-	realm.add_other(that1_name, that1_publickey);
-	realm.add_other(that2_name, that2_publickey);
-
-	if (ecatal_ip.empty()) {
-		ecatal_ip = Emyzelium::DEF_IP;
-	}
-
-	realm.add_ecatal("d.OT&vpji%VDDI[8QI2L8K]ZiqpwFjxhR{5ftXRp", true, string("tcp://") + ecatal_ip + ":" + to_string(Emyzelium::DEF_ECATAL_BEACON_PORT + 1), true, string("tcp://") + ecatal_ip + ":" + to_string(Emyzelium::DEF_ECATAL_PUBSUB_PORT + 1));
-	realm.add_ecatal("k>Kk(x/V]=y1=1R%0P2+rF@%<=##eJa&BK<PX>50", true, string("tcp://") + ecatal_ip + ":" + to_string(Emyzelium::DEF_ECATAL_BEACON_PORT + 2), true, string("tcp://") + ecatal_ip + ":" + to_string(Emyzelium::DEF_ECATAL_PUBSUB_PORT + 2));
-	realm.add_ecatal("O%[dWs({TBGSfUKlkpcoYHGhCeZLD?[zzjZ7TB9C", true, string("tcp://") + ecatal_ip + ":" + to_string(Emyzelium::DEF_ECATAL_BEACON_PORT + 3), true, string("tcp://") + ecatal_ip + ":" + to_string(Emyzelium::DEF_ECATAL_PUBSUB_PORT + 3));
+	realm.add_other(that1_name, that1_publickey, that1_onion, that1_port);
+	realm.add_other(that2_name, that2_publickey, that2_onion, that2_port);
 
 	realm.reset();
 
@@ -577,41 +593,10 @@ int run_realm(string name, string ecatal_ip="") {
 }
 
 
-int run_ecatal(string name) {
-	if (name == "A") {
-		Emyzelium::Ecataloguz ecatal("T*t*)FNSa1RSOG9Dbxuvq1M{hE-luf{YjW+8j^@1",
-			{}, {},
-			Emyzelium::DEF_ECATAL_BEACON_PORT + 1, Emyzelium::DEF_ECATAL_PUBSUB_PORT + 1,
-			60000000, 1000000, 100000);
-		ecatal.run();
-	} else if (name == "B") {
-		Emyzelium::Ecataloguz ecatal("+f(o9nJE%H4[f?Z7eZ!>j[+>WVx0EkDVUYbw[B^8",
-		{{"iGxlt)JYh!P9xPCY%BlY4Y]c^<=W)k^$T7GirF[R", "Alien"}, {"(>?aRHs!hJ2ykb?B}t6iGgo3-5xooFh@9F/4C:DW", "John"}, {"WR)%3-d9dw)%3VQ@O37dVe<09FuNzI{vh}Vfi+]0", "Mary"}}, unordered_set<string>{},
-		Emyzelium::DEF_ECATAL_BEACON_PORT + 2, Emyzelium::DEF_ECATAL_PUBSUB_PORT + 2,
-		60000000, 1000000, 100000);
-		ecatal.run();
-	} else if (name == "C") {
-		Emyzelium::Ecataloguz ecatal("ap:W}bEN0@@>9^>ZcYNDP?Xc6JC8mIIbMw@-zV@c",
-		unordered_map<string, string>{}, unordered_set<string>{},
-		Emyzelium::DEF_ECATAL_BEACON_PORT + 3, Emyzelium::DEF_ECATAL_PUBSUB_PORT + 3,
-		60000000, 1000000, 100000);
-		ecatal.read_beacon_whitelist_publickeys_with_comments("publickeys_with_comments.txt");
-		ecatal.read_pubsub_whitelist_publickeys("publickeys_with_comments.txt");
-		ecatal.run();
-	} else {
-		printf("Unknown ecatal name: \"%s\". Must be \"A\", \"B\", or \"C\".\n", name.c_str());
-		return (-1);
-	}
-	return 0;
-}
-
-
 int main(int argc, char** argv) {
-	if (argc < 3) {
+	if (argc < 2) {
 		printf("Syntax:\n");
-		printf("demo realm <Alien|John|Mary> [ecataloguz IP]\n");
-		printf("or\n");
-		printf("demo ecatal <A|B|C>\n");
+		printf("demo <Alien|John|Mary>\n");
 		return (-1);
 	}
 
@@ -620,13 +605,5 @@ int main(int argc, char** argv) {
 		args.emplace_back(argv[i]);
 	}
 
-	if (args[1] == "realm") {
-		return run_realm(args[2], (argc >= 4) ? args[3] : "");
-	} else if (args[1] == "ecatal") {
-		return run_ecatal(args[2]);
-	} else {
-		printf("Unknown 1st arg.\n");
-		return (-1);
-	}
-
+	return run_realm(args[1]);
 }
