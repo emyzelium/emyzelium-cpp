@@ -1,10 +1,14 @@
 # ![logo disk](https://github.com/emyzelium/visuals/blob/main/logo_disk_32.png) Emyzelium (C++)
 
-is another wrapper around [ZeroMQ](https://zeromq.org/)'s [Publish-Subscribe](https://zeromq.org/socket-api/#publish-subscribe-pattern) messaging pattern with mandatory [Curve](https://rfc.zeromq.org/spec/26/) security and optional [ZAP](https://rfc.zeromq.org/spec/27/) authentication filter, over [Tor](https://torproject.org), through Tor SOCKS5 proxy, for distributed artificial elife, decision making etc. systems where each peer, identified by its onion address, port, and public key, provides and updates vectors of vectors of bytes under unique topics that other peers can subscribe to and receive.
+is another wrapper around [ZeroMQ](https://zeromq.org/)'s [Publish-Subscribe](https://zeromq.org/socket-api/#publish-subscribe-pattern) messaging pattern with mandatory [Curve](https://rfc.zeromq.org/spec/26/) security and optional [ZAP](https://rfc.zeromq.org/spec/27/) authentication filter, over [Tor](https://torproject.org), through Tor SOCKS proxy, for distributed artificial elife, decision making etc. systems where each peer, identified by its public key, onion address, and port, publishes and updates vectors of vectors of bytes of data under unique topics that other peers subscribe to and receive the respective data.
 
-Requires [C++11 compiler support](https://en.cppreference.com/w/cpp/compiler_support#References) and, of course, [libzmq](https://github.com/zeromq/libzmq) ([more on build](http://wiki.zeromq.org/build:_start)). Demo requires [ncursesw](https://packages.ubuntu.com/bionic/libncursesw5-dev).
+Requires [C++11 compiler support](https://en.cppreference.com/w/cpp/compiler_support#References), [libzmq](https://github.com/zeromq/libzmq) ([more on build](http://wiki.zeromq.org/build:_start)), and [Tor](https://community.torproject.org/onion-services/setup/install/). Demo also requires [ncursesw](https://packages.ubuntu.com/bionic/libncursesw5-dev).
 
-Versions in other languages: [Python](https://github.com/emyzelium/emyzelium-py).
+Versions in other languages:
+
+* [Python](https://github.com/emyzelium/emyzelium-py)
+
+* [Rust](https://github.com/emyzelium/emyzelium-rs)
 
 ## Warning
 
@@ -37,13 +41,13 @@ HiddenServicePort 60849
 
 and in a terminal (note `tor@default` instead of `tor`):
 
-```console
+```shell
 $ sudo systemctl restart tor@default
 ```
 
 then check if there are any problems:
 
-```console
+```shell
 $ systemctl status tor@default
 ```
 
@@ -51,19 +55,19 @@ should show `... active(running) ...`
 
 Wait a little for 3 specified dirs to appear, and, in each of them, the file `hostname`.
 
-Now download Emyzelium files, say, to `~/emz-cpp/`. Open `demo/demo.cpp` and, right after `#include`-s, change `ALIEN_ONION` value to onion address from `/var/lib/tor/p2p_dummysite1/hostname` *without `.onion` suffix*. Also change `ALIEN_PORT` value to 60847.
+Now download Emyzelium files, say, to `~/emz-cpp/`. Open `demo/demo.cpp` and, right after `#include`-s, change `ALIEN_ONION` value to onion address from `/var/lib/tor/p2p_dummysite1/hostname` *without `.onion` suffix*. Also change `ALIEN_PORT` value to `60847`.
 
 Make analogous changes to `JOHN_ONION`, `JOHN_PORT` (2) and `MARY_ONION`, `MARY_PORT` (3). Save changes to `demo.cpp`.
 
 ---
 
-You can also check whether these onion addresses have become known to Tor network; if they have, e.g. `netcat` should work — open 2 terminals and see if it is the case:
+You can also check whether these onion addresses have become known to Tor network; if they have, e.g. `netcat` should work, — open 2 terminals and see if it is the case:
 
-```console
+```shell
 term1$ nc -v -l 60847
 ```
 
-```console
+```shell
 term2$ torsocks nc -v ONION1.onion 60847
 ```
 
@@ -73,21 +77,21 @@ term2$ torsocks nc -v ONION1.onion 60847
 
 From `~/emz-cpp/demo/` build by
 
-```console
+```shell
 $ make
 ```
 
 Finally, to emyzeliumisation of Life. Open 3 terminals and from `~/emz-cpp/demo` run the following in any order:
 
-```console
+```shell
 term1$ ./demo Alien
 ```
 
-```console
+```shell
 term2$ ./demo John
 ```
 
-```console
+```shell
 term3$ ./demo Mary
 ```
 
@@ -105,7 +109,7 @@ Then you should see something like this:
 
 ![Demo animation, Mary](https://github.com/emyzelium/visuals/blob/main/anim_demo_Mary.gif)
 
-As soon as Alien's, John's, and Mary's peers (*efungi*) have connected to each other via Tor, their cellular automatons (*realms*) can exchange cell regions (*etales*) not far from realtime.
+As soon as Alien's, John's, and Mary's peers (*efungi*) have established connections (*ehyphae*) to each other over Tor, their cellular automatons (*realms*) can exchange cell regions (*etales*) not far from realtime.
 
 Before the connections are established, SLUs (Since Last Update) are "large" (no updates yet); afterward they stay in 0–10 sec range. Press "1" or "2" to actually import updated region from other realm.
 
@@ -113,20 +117,20 @@ If you make that import automatic as well as emission, e.g. import from random o
 
 Note that birth/survival rules of Alien's CA, B34/S34, are different from classic B3/S23 of John's and Mary's CAs. In other words, although the "local geometry" of the realms is the same (Moore neigborhood), their "physics" are different.
 
-The names "Alien", "John", "Mary" are not required and are used for convenience. Each peer is identified by its onion, port, and public key.
+The names "Alien", "John", "Mary" are not required and are used for convenience. Each peer is identified by its public key, onion, and port.
 
 You can quit any of these 3 instances at any time and run it again after a while, the connections will be restored. The last "snapshot" of the region published by given peer is kept at each peer that has received it before being replaced by the next snapshot.
 
 And you can mix versions in different languages, as long as no more than single instance of each peer runs at the same time. That is, you can replace
 
-```console
-t1$ ./demo Alien
+```shell
+term1$ ./demo Alien
 ```
 
 by
 
-```console
-t1$ python3 demo.py Alien
+```shell
+term1$ python3 demo.py Alien
 ```
 
 from [Emyzelium in Python](https://github.com/emyzelium/emyzelium-py).
@@ -142,19 +146,19 @@ HiddenServiceDir /var/lib/tor/p2p_dummysite/
 HiddenServicePort 60847
 ```
 
-only onion addresses in `hostname` files will be different and, as before, should be specified as `ALIEN_ONION`, `JOHN_ONION`, `MARY_ONION` values in `demo.cpp`. Also, this time it suffices on each PC to have in `demo.cpp` only the single corresponding `SECRETKEY`.
+only onion addresses in `hostname` files will be different and, as before, should be specified as `ALIEN_ONION`, `JOHN_ONION`, `MARY_ONION` values in `demo.cpp`-s; all `_PORT`-s must be `60847`. Also, this time it suffices on each PC to have in `demo.cpp` only the single corresponding `_SECRETKEY`.
 
 After Emyzelium files with accordingly modified `demo.cpp` have been put on these PCs and `demo` executable has been built, do the following:
 
-```console
+```shell
 pc1$ ./demo Alien
 ```
 
-```console
+```shell
 pc2$ ./demo John
 ```
 
-```console
+```shell
 pc3$ ./demo Mary
 ```
 
@@ -164,7 +168,7 @@ and almost exactly the same as above should be observed.
 
 Emyzelium relies on ZeroMQ's Curve and ZAP encryption and authentication schemes, a variety of [public key cryptography](https://en.wikipedia.org/wiki/Public-key_cryptography) (basic knowledge of which is presumed). Therefore each "subject" within emyzelium needs and is partially defined by a secret key and a corresponding public key. There are 2 encodings of such keys: raw (32 bytes, each from 0–255 range) and printable [Z85](https://rfc.zeromq.org/spec/32/) (40 symbols, each from 85-element subset of ASCII).
 
-Emyzelium's methods expect the keys as `string`s in Z85 encoding.
+Emyzelium's methods expect the keys as `string`-s in Z85 encoding.
 
 To obtain such pair of keys,
 
@@ -176,8 +180,9 @@ int main() {
     char publickey[41];
     char secretkey[41];
     zmq_curve_keypair(publickey, secretkey);
+    printf("Public key: %s\n", publickey);
     // Make sure no one is behind your back...
-    printf("Public key: %s\nSecret key: %s\n", publickey, secretkey);
+    printf("Secret key: %s\n", secretkey);
     return 0;
 }
 ```
@@ -221,7 +226,7 @@ So, *Efunguz*, *Ehypha*, and *Etale* are just fancy names of well known concepts
 
 ---
 
-**Efunguz**, a.k.a. peer, is the mediator between some "realm", represented by your program, and Tor network, represented by ZeroMQ on top of Tor SOCKS5 proxy, to which it talks. To the former, it simplifies security, (re)connection, and data flow tasks.
+**Efunguz**, a.k.a. peer, is the mediator between some "realm", represented by your program, and Tor network, represented by ZeroMQ on top of Tor SOCKS proxy, to which it talks. To the former, it simplifies security, (re)connection, and data flow tasks.
 
 The simplest way to construct efunguz is
 
@@ -232,17 +237,18 @@ Efunguz efunguz(my_secretkey);
 auto* efunguz = new Efunguz(my_secretkey); // then "delete efunguz;" at the end
 ```
 
-Some additional parameters:
+More customisation:
 
 ```cpp
-set<string> whitelist_publickeys = {"WR)%3-d9dw)%3VQ@O37dVe<09FuNzI{vh}Vfi+]0", "iGxlt)JYh!P9xPCY%BlY4Y]c^<=W)k^$T7GirF[R"};
+unordered_set<string> whitelist_publickeys = {"WR)%3-d9dw)%3VQ@O37dVe<09FuNzI{vh}Vfi+]0", "iGxlt)JYh!P9xPCY%BlY4Y]c^<=W)k^$T7GirF[R"};
 uint16_t pubsub_port = 54321;
-Efunguz efunguz(my_secretkey, whitelist_publickeys, pubsub_port);
+uint16_t torproxy_port = 9955;
+Efunguz efunguz(my_secretkey, whitelist_publickeys, pubsub_port, torproxy_port);
 ```
 
 Now only the owners of secret keys corresponding to `whitelist_publickeys` will be able to subscribe to and receive etales of this efunguz. And they must connect to port `54321` instead of "default" one.
 
-By default whitelist is empty, which means... opposite to what you might have thought: everyone is allowed to subscribe.
+*By default whitelist is empty*, which means... opposite to what you might have thought: *everyone is allowed to subscribe*.
 
 Efunguz is mutable. You can
 
@@ -251,10 +257,17 @@ Efunguz is mutable. You can
 * add and delete *ehyphae* (see below) via `add_ehypha()` and `del_ehypha()`:
 
 ```cpp
-string that_onion = "abcde23456abcde23456abcde23456abcde23456abcde23456abcdef"
-uint16_t that_port = 12345
 string that_publickey = "WR)%3-d9dw)%3VQ@O37dVe<09FuNzI{vh}Vfi+]0";
+string that_onion = "abcde23456abcde23456abcde23456abcde23456abcde23456abcdef";
+uint16_t that_port = 12345;
 auto& ehypha = get<0>(efunguz.add_ehypha(that_publickey, that_onion, that_port));
+```
+
+* obtain pointer to ehypha by its publickey via `get_ehypha_ptr()`:
+
+```cpp
+string that_publickey = "iGxlt)JYh!P9xPCY%BlY4Y]c^<=W)k^$T7GirF[R";
+ehypha = get<0>(efunguz.get_ehypha_ptr(that_publickey));
 ```
 
 * publish/emit etales via `emit_etale()`:
@@ -312,6 +325,13 @@ const auto& that_etale = get<0>(ehypha.add_etale("status3"));
 
 At first, etale is empty (no parts). If efunguz with public key `WR)%3-d9dw)%3VQ@O37dVe<09FuNzI{vh}Vfi+]0` is available at onion `abcde23456abcde23456abcde23456abcde23456abcde23456abcdef`, port `12345`, allows subscriptions from your efunguz, and publishes etale under the title `status3`, then, after a while, this etale will be received by you after `efunguz.update()` call, and will be updated as long as these conditions hold. Its fields are described below in *Etale* paragraph.
 
+* obtain pointer to etale by its title via `get_etale_ptr()`:
+
+```cpp
+string title = "status7";
+etale = get<0>(ehypha->get_etale_ptr(title));
+```
+
 * pause and resume update of either single etale, or all etales, via `pause_etale[s]()` and `resume_etale[s]()`
 
 *Internally, Ehypha owns SUB socket for etales. The context is the one of Efunguz.*
@@ -321,7 +341,7 @@ At first, etale is empty (no parts). If efunguz with public key `WR)%3-d9dw)%3VQ
 **Etale**, a.k.a. partitioned data chunk with metadata, is the main data unit that efungi exchange.
 It has the following public fields:
 
-* `parts` (`vector<vector<uint8_t>>&`) contains the data
+* `parts` (`vector<vector<uint8_t>>&`) contains the latest obtained data
 
 * `t_out` (`int64_t`) is the time in microseconds since Unix epoch, measured at sender, when the etale was published
 

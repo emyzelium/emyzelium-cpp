@@ -2,12 +2,13 @@
  * Emyzelium (C++)
  *
  * is another wrapper around ZeroMQ's Publish-Subscribe messaging pattern
- * with mandatory Curve security and optional ZAP authentication filter
- * over Tor, using Tor SOCKS5 proxy,
+ * with mandatory Curve security and optional ZAP authentication filter,
+ * over Tor, through Tor SOCKS proxy,
  * for distributed artificial elife, decision making etc. systems where
- * each peer, identified by its onion address, port, and public key,
- * provides and updates vectors of vectors of bytes
- * under unique topics that other peers can subscribe to and receive.
+ * each peer, identified by its public key, onion address, and port,
+ * publishes and updates vectors of vectors of bytes of data
+ * under unique topics that other peers subscribe to
+ * and receive the respective data.
  * 
  * https://github.com/emyzelium/emyzelium-cpp
  * 
@@ -35,12 +36,11 @@
 
 #include "emyzelium.hpp"
 
-#include <zmq.h>
-
 #include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <random>
 
 
 using namespace std;
@@ -52,10 +52,12 @@ const size_t KEY_BIN_LEN = 32;
 const size_t KEY_Z85_LEN = 40;
 const size_t KEY_Z85_CSTR_LEN = KEY_Z85_LEN + 1;
 
-const char* ROUTING_ID_PUBSUB = "pubsub";
+const char* CURVE_MECHANISM_ID = "CURVE"; // See https://rfc.zeromq.org/spec/27/
+const char* ZAP_DOMAIN = "emyz";
+
+const size_t ZAP_SESSION_ID_LEN = 32;
 
 const int DEF_IPV6_STATUS = 1;
-
 const int DEF_LINGER = 0;
 
 const size_t MAX_PUBLICKEYS_FILE_LINE_LEN = 96;
@@ -88,11 +90,8 @@ int zmqe_setsockopt(zsocket* socket, int option_name, const char* option_cstr) {
 }
 
 
-int zmqe_poll_in(zsocket* socket, long timeout) {
-	zmq_pollitem_t zpi;
-	zpi.socket = socket;
-	zpi.events = ZMQ_POLLIN;
-	return zmq_poll(&zpi, 1, timeout);
+int zmqe_poll_in_now(zmq_pollitem_t* zpi) {
+	return zmq_poll(zpi, 1, 0);
 }
 
 
@@ -142,6 +141,9 @@ Ehypha::Ehypha(zcontext* context, const string& secretkey, const string& publick
 	zmqe_setsockopt(this->subsock, ZMQ_CURVE_SERVERKEY, serverkey.c_str());
 	zmqe_setsockopt(this->subsock, ZMQ_SOCKS_PROXY, (torproxy_host + ":" + to_string(torproxy_port)).c_str());
 	zmq_connect(this->subsock, ("tcp://" + onion + ".onion:" + to_string(pubsub_port)).c_str());
+
+	this->subpollitem.socket = this->subsock;
+	this->subpollitem.events = ZMQ_POLLIN;
 }
 
 
@@ -156,6 +158,15 @@ tuple<const Etale&, EW> Ehypha::add_etale(const string& title) {
 		return tuple<const Etale&, EW>{this->etales.at(title), EW::Ok};
 	} else {
 		return tuple<const Etale&, EW>{this->etales.at(title), EW::AlreadyPresent};
+	}
+}
+
+
+tuple<const Etale*, EW> Ehypha::get_etale_ptr(const string& title) {
+	if (this->etales.count(title) == 1) {
+		return tuple<const Etale*, EW>{&(this->etales.at(title)), EW::Ok};
+	} else {
+		return tuple<const Etale*, EW>{nullptr, EW::Absent};
 	}
 }
 
@@ -219,7 +230,7 @@ void Ehypha::resume_etales() {
 void Ehypha::update() {
 	int64_t t = time_musec();
 
-	while (zmqe_poll_in(this->subsock, 0) > 0) {
+	while (zmqe_poll_in_now(& this->subpollitem) > 0) {
 		auto msg_parts = zmqe_recv(this->subsock);
 		if (msg_parts.size() >= 2) {
 			// 0th is topic, 1st is remote time, rest (optional) is data
@@ -266,15 +277,27 @@ Efunguz::Efunguz(const string& secretkey, const unordered_set<string>& whitelist
 	this->context = zmq_ctx_new();
 	zmq_ctx_set(this->context, ZMQ_IPV6, DEF_IPV6_STATUS);
 
+	// At first, REP socket for ZAP auth...
 	this->zapsock = zmq_socket(this->context, ZMQ_REP);
 	zmqe_setsockopt(this->zapsock, ZMQ_LINGER, DEF_LINGER);
 	zmq_bind(this->zapsock, "inproc://zeromq.zap.01");
 
+	this->zappollitem.socket = this->zapsock;
+	this->zappollitem.events = ZMQ_POLLIN;
+
+	random_device randev;
+	this->zap_session_id.assign(ZAP_SESSION_ID_LEN, 0);
+	for (size_t i = 0; i < ZAP_SESSION_ID_LEN; i++) {
+		this->zap_session_id[i] = randev() & 0xFF; // must be cryptographically random... is it?
+	}
+
+	// ..and only then, PUB socket
 	this->pubsock = zmq_socket(this->context, ZMQ_PUB);
 	zmqe_setsockopt(this->pubsock, ZMQ_LINGER, DEF_LINGER);
 	zmqe_setsockopt(this->pubsock, ZMQ_CURVE_SERVER, 1);
 	zmqe_setsockopt(this->pubsock, ZMQ_CURVE_SECRETKEY, this->secretkey.c_str());
-	zmq_setsockopt(this->pubsock, ZMQ_ROUTING_ID, ROUTING_ID_PUBSUB, strlen(ROUTING_ID_PUBSUB));
+	zmq_setsockopt(this->pubsock, ZMQ_ZAP_DOMAIN, ZAP_DOMAIN, strlen(ZAP_DOMAIN)); // to enable auth, must be non-empty due to ZMQ RFC 27
+	zmq_setsockopt(this->pubsock, ZMQ_ROUTING_ID, this->zap_session_id.data(), ZAP_SESSION_ID_LEN); // to make sure only this pubsock can pass auth through zapsock; see update()
 	zmq_bind(this->pubsock, (string("tcp://*:") + to_string(this->pubsub_port)).c_str());
 }
 
@@ -327,6 +350,16 @@ tuple<Ehypha&, EW> Efunguz::add_ehypha(const string& that_publickey, const strin
 }
 
 
+tuple<Ehypha*, EW> Efunguz::get_ehypha_ptr(const string& that_publickey) {
+	string serverkey = cut_pad_key_str(that_publickey);
+	if (this->ehyphae.count(serverkey) == 1) {
+		return tuple<Ehypha*, EW>{&(this->ehyphae.at(serverkey)), EW::Ok};
+	} else {
+		return tuple<Ehypha*, EW>{nullptr, EW::Absent};
+	}
+}
+
+
 EW Efunguz::del_ehypha(const string& that_publickey) {
 	string serverkey = cut_pad_key_str(that_publickey);
 	if (this->ehyphae.count(serverkey) == 1) {
@@ -359,14 +392,14 @@ void Efunguz::emit_etale(const string& title, const vector<vector<uint8_t>>& par
 
 
 void Efunguz::update() {
-	while (zmqe_poll_in(this->zapsock, 0) > 0) {
+	while (zmqe_poll_in_now(& this->zappollitem) > 0) {
 		vector<vector<uint8_t>> request = zmqe_recv(this->zapsock);
 		vector<vector<uint8_t>> reply;
 
 		auto& version = request[0];
 		auto& sequence = request[1];
-		auto& domain = request[2];
-		auto& address = request[3];
+		// auto& domain = request[2];
+		// auto& address = request[3];
 		auto& identity = request[4];
 		auto& mechanism = request[5];
 		auto& key_u8 = request[6];
@@ -378,7 +411,7 @@ void Efunguz::update() {
 		reply.push_back(version);
 		reply.push_back(sequence);
 
-		if ((identity == cstr_to_vec_u8(ROUTING_ID_PUBSUB)) && (this->whitelist_publickeys.empty() || (this->whitelist_publickeys.count(key) == 1))) {
+		if ((identity == this->zap_session_id) && (mechanism == cstr_to_vec_u8(CURVE_MECHANISM_ID)) && (this->whitelist_publickeys.empty() || (this->whitelist_publickeys.count(key) == 1))) {
 			// Auth passed; though needless (yet), set user-id to client's publickey
 			reply.push_back(cstr_to_vec_u8("200"));
 			reply.push_back(cstr_to_vec_u8("OK"));

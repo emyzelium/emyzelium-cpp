@@ -2,12 +2,13 @@
  * Emyzelium (C++)
  *
  * is another wrapper around ZeroMQ's Publish-Subscribe messaging pattern
- * with mandatory Curve security and optional ZAP authentication filter
- * over Tor, using Tor SOCKS5 proxy,
+ * with mandatory Curve security and optional ZAP authentication filter,
+ * over Tor, through Tor SOCKS proxy,
  * for distributed artificial elife, decision making etc. systems where
- * each peer, identified by its onion address, port, and public key,
- * provides and updates vectors of vectors of bytes
- * under unique topics that other peers can subscribe to and receive.
+ * each peer, identified by its public key, onion address, and port,
+ * publishes and updates vectors of vectors of bytes of data
+ * under unique topics that other peers subscribe to
+ * and receive the respective data.
  * 
  * https://github.com/emyzelium/emyzelium-cpp
  * 
@@ -35,6 +36,7 @@
 
 #include "../emyzelium.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <ncurses.h>
@@ -180,6 +182,12 @@ void print_rect(int y, int x, int h, int w, int attr=0) {
 }
 
 
+struct Other {
+	string name;
+	string publickey;
+};
+
+
 class Realm_CA {
 	string name;
 	Emyzelium::Efunguz* efunguz;
@@ -190,7 +198,7 @@ class Realm_CA {
 	set<int> survival;
 	double autoemit_interval;
 	int framerate;
-	vector<tuple<const string, const Emyzelium::Etale&, const Emyzelium::Etale&>> others;
+	vector<Other> others;
 	int i_turn;
 	int cursor_y;
 	int cursor_x;
@@ -214,9 +222,14 @@ public:
 
 	void add_other(const string& name, const string& publickey, const string& onion, const uint16_t port) {
 		auto& ehypha = get<0>(this->efunguz->add_ehypha(publickey, onion, port));
-		auto& selfdesc = get<0>(ehypha.add_etale(""));
-		auto& zone = get<0>(ehypha.add_etale("zone"));
-		this->others.push_back(tuple<const string, const Emyzelium::Etale&, const Emyzelium::Etale&>{name + "'s", selfdesc, zone});
+		ehypha.add_etale("");
+		ehypha.add_etale("zone");
+		this->others.push_back(Other{name, publickey});
+	}
+
+
+	void add_whitelist_publickeys(const unordered_set<string>& publickeys) {
+		this->efunguz->add_whitelist_publickeys(publickeys);
 	}
 
 
@@ -372,7 +385,7 @@ public:
 				int szw = *((uint16_t *)parts[1].data());
 				if (parts[2].size() == szh * szw) {
 					int dzh = min(szh, this->height);
-					int dzw = min(szw, this->width);
+					int dzw = min(szw, this->width / 3);
 					for (int y = 0; y < dzh; y++) {
 						for (int x = 0; x < dzw; x++) {
 							this->cells[y][x] = parts[2][y * szw + x] & 1;
@@ -406,8 +419,8 @@ public:
 
 		int64_t t_start = time_musec();
 
-		double t_last_render = 0.0;
-		double t_last_emit = 0.0;
+		double t_last_render = -65536.0;
+		double t_last_emit = -65536.0;
 
 		while (!quit) {
 			double t = 1e-6 * (time_musec() - t_start);
@@ -420,13 +433,11 @@ public:
 				} else {
 					mvaddstrattr(0, 0, "Render OFF");
 				}
-				mvaddstrattr((h >> 1) + 2, 0, string("This realm: \"") + this->name + "\" (birth " + set_to_str(this->birth) + ", survival " + set_to_str(this->survival) + "), SLE " + to_str(t - t_last_emit, 1) + ", autoemit (" + to_str(this->autoemit_interval, 1) + ") " + (autoemit ? "ON" : "OFF"));
+				mvaddstrattr((h >> 1) + 2, 0, string("This realm: \"") + this->name + "'s\" (birth " + set_to_str(this->birth) + ", survival " + set_to_str(this->survival) + "), SLE " + to_str(t - t_last_emit, 1) + ", autoemit (" + to_str(this->autoemit_interval, 1) + ") " + (autoemit ? "ON" : "OFF"));
 				mvaddstrattr((h >> 1) + 3, 0, "Other realms: ");
 				for (int i_other = 0; i_other < this->others.size(); i_other++) {
 					const auto& that = this->others[i_other];
-					const auto& that_name = get<0>(that);
-					const auto& that_etale_zone = get<2>(that);
-					addstrattr((i_other > 0 ? string(", ") : string("")) + "[" + to_string(i_other + 1) + "] \"" + that_name + "\" (SLU " + to_str(t - 1e-6 * (that_etale_zone.t_in - t_start), 1) + ")");
+					addstrattr((i_other > 0 ? string(", ") : string("")) + "[" + to_string(i_other + 1) + "] \"" + that.name + "'s\" (SLU " + to_str(t - 1e-6 * (get<0>(get<0>(this->efunguz->get_ehypha_ptr(that.publickey))->get_etale_ptr("zone"))->t_in - t_start), 1) + ")");
 				}
 				mvaddstrattr(LINES - 3, 0, "[Q] quit, [C] clear, [R] reset, [V] render on/off, [P] pause/resume");
 				mvaddstrattr(LINES - 2, 0, "[A] autoemit on/off, [E] emit, [1-9] import");
@@ -476,8 +487,8 @@ public:
 				case '1'...'9':
 					int i_other = ch - '1';
 					if (i_other < this->others.size()) {
-						const auto& that_etale_zone = get<2>(this->others[i_other]);
-						this->put_etale_to_zone(that_etale_zone.parts);
+						const auto* that_zone = get<0>(get<0>(this->efunguz->get_ehypha_ptr(this->others[i_other].publickey))->get_etale_ptr("zone"));
+						this->put_etale_to_zone(that_zone->parts);
 					}
 					break;
 			}
@@ -514,7 +525,8 @@ public:
 
 
 int run_realm(string name) {
-	string thisname = name + "'s";
+	string name_up = name;
+	transform(name_up.begin(), name_up.end(), name_up.begin(), ::toupper);
 
 	string secretkey("");
 	uint16_t pubport = 0;
@@ -529,7 +541,7 @@ int run_realm(string name) {
 	set<int> birth{};
 	set<int> survival{};
 
-	if (name == "Alien") {
+	if (name_up == "ALIEN") {
 		secretkey = ALIEN_SECRETKEY;
 		pubport = ALIEN_PORT;
 		that1_name = "John";
@@ -542,7 +554,7 @@ int run_realm(string name) {
 		that2_port = MARY_PORT;
 		birth = {3, 4};
 		survival = {3, 4}; // 3-4 Life
-	} else if (name == "John") {
+	} else if (name_up == "JOHN") {
 		secretkey = JOHN_SECRETKEY;
 		pubport = JOHN_PORT;
 		that1_name = "Alien";
@@ -555,7 +567,7 @@ int run_realm(string name) {
 		that2_port = MARY_PORT;
 		birth = {3};
 		survival = {2, 3}; // classic Conway's Life
-	} else if (name == "Mary") {
+	} else if (name_up == "MARY") {
 		secretkey = MARY_SECRETKEY;
 		pubport = MARY_PORT;
 		that1_name = "Alien";
@@ -578,7 +590,10 @@ int run_realm(string name) {
 	int height = (LINES - 8) << 1; // even
 	int width = COLS - 2;
 
-	Realm_CA realm(thisname, secretkey, unordered_set<string>{}, pubport, height, width, birth, survival);
+	Realm_CA realm(name, secretkey, unordered_set<string>{}, pubport, height, width, birth, survival);
+
+	// Uncomment to restrict: Alien gets data from John and Mary; John gets data from Alien but not from Mary; Mary gets data from neither Alien, nor John
+	// realm.add_whitelist_publickeys({that1_publickey});
 
 	realm.add_other(that1_name, that1_publickey, that1_onion, that1_port);
 	realm.add_other(that2_name, that2_publickey, that2_onion, that2_port);

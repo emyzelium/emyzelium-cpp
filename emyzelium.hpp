@@ -2,12 +2,13 @@
  * Emyzelium (C++)
  *
  * is another wrapper around ZeroMQ's Publish-Subscribe messaging pattern
- * with mandatory Curve security and optional ZAP authentication filter
- * over Tor, using Tor SOCKS5 proxy,
+ * with mandatory Curve security and optional ZAP authentication filter,
+ * over Tor, through Tor SOCKS proxy,
  * for distributed artificial elife, decision making etc. systems where
- * each peer, identified by its onion address, port, and public key,
- * provides and updates vectors of vectors of bytes
- * under unique topics that other peers can subscribe to and receive.
+ * each peer, identified by its public key, onion address, and port,
+ * publishes and updates vectors of vectors of bytes of data
+ * under unique topics that other peers subscribe to
+ * and receive the respective data.
  * 
  * https://github.com/emyzelium/emyzelium-cpp
  * 
@@ -37,6 +38,8 @@
 #define EMYZELIUM_HPP
 
 
+#include <zmq.h>
+
 #include <cstdint>
 #include <unordered_map>
 #include <string>
@@ -59,16 +62,16 @@ namespace typeAliases {
 using namespace typeAliases;
 
 
-const string VERSION = "0.9.0";
-const string DATE = "2023.10.08";
+const string VERSION = "0.9.2";
+const string DATE = "2023.10.11";
 
 enum class EW {
-	Ok,
-	AlreadyPresent,
-	AlreadyAbsent,
-	AlreadyPaused,
-	AlreadyResumed,
-	Absent
+	Ok 				= 0,
+	AlreadyPresent 	= 1,
+	AlreadyAbsent 	= 2,
+	AlreadyPaused 	= 3,
+	AlreadyResumed 	= 4,
+	Absent 			= 5
 };
 
 const uint16_t DEF_PUBSUB_PORT = 0xEDAF; // 60847
@@ -95,6 +98,7 @@ class Ehypha {
 	friend class Efunguz;
 	
 	zsocket* subsock;
+	zmq_pollitem_t subpollitem;
 	unordered_map<string, Etale> etales;
 
 	void update();
@@ -107,6 +111,7 @@ public:
 	Ehypha(zcontext* context, const string& secretkey, const string& publickey, const string& serverkey, const string& onion, const uint16_t pubsub_port, const uint16_t torproxy_port, const string& torproxy_host);
 
 	tuple<const Etale&, EW> add_etale(const string& title);
+	tuple<const Etale*, EW> get_etale_ptr(const string& title);
 	EW del_etale(const string& title);
 
 	EW pause_etale(const string& title);
@@ -129,6 +134,8 @@ class Efunguz {
 	unordered_map<string, Ehypha> ehyphae;
 	zcontext* context;
 	zsocket* zapsock;
+	zmq_pollitem_t zappollitem;
+	vector<uint8_t> zap_session_id;
 	zsocket* pubsock;
 
 public:
@@ -144,6 +151,7 @@ public:
 	void read_whitelist_publickeys(const string& filepath);
 
 	tuple<Ehypha&, EW> add_ehypha(const string& that_publickey, const string& onion, const uint16_t pubsub_port=DEF_PUBSUB_PORT);
+	tuple<Ehypha*, EW> get_ehypha_ptr(const string& that_publickey);
 	EW del_ehypha(const string& that_publickey);
 
 	void emit_etale(const string& title, const vector<vector<uint8_t>>& parts);
