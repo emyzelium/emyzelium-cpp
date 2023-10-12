@@ -1,4 +1,4 @@
-# ![logo disk](https://github.com/emyzelium/visuals/blob/main/logo_disk_32.png) Emyzelium (C++)
+# ![logo disk](https://raw.githubusercontent.com/emyzelium/visuals/main/logo_disk_32.png) Emyzelium (C++)
 
 is another wrapper around [ZeroMQ](https://zeromq.org/)'s [Publish-Subscribe](https://zeromq.org/socket-api/#publish-subscribe-pattern) messaging pattern with mandatory [Curve](https://rfc.zeromq.org/spec/26/) security and optional [ZAP](https://rfc.zeromq.org/spec/27/) authentication filter, over [Tor](https://torproject.org), through Tor SOCKS proxy, for distributed artificial elife, decision making etc. systems where each peer, identified by its public key, onion address, and port, publishes and updates vectors of vectors of bytes of data under unique topics that other peers subscribe to and receive the respective data.
 
@@ -99,15 +99,15 @@ Then you should see something like this:
 
 * Terminal 1 (peer Alien):
 
-![Demo animation, Alien](https://github.com/emyzelium/visuals/blob/main/anim_demo_Alien.gif)
+![Demo animation, Alien](https://raw.githubusercontent.com/emyzelium/visuals/main/anim_demo_Alien.gif)
 
 * Terminal 2 (peer John):
 
-![Demo animation, John](https://github.com/emyzelium/visuals/blob/main/anim_demo_John.gif)
+![Demo animation, John](https://raw.githubusercontent.com/emyzelium/visuals/main/anim_demo_John.gif)
 
 * Terminal 3 (peer Mary):
 
-![Demo animation, Mary](https://github.com/emyzelium/visuals/blob/main/anim_demo_Mary.gif)
+![Demo animation, Mary](https://raw.githubusercontent.com/emyzelium/visuals/main/anim_demo_Mary.gif)
 
 As soon as Alien's, John's, and Mary's peers (*efungi*) have established connections (*ehyphae*) to each other over Tor, their cellular automatons (*realms*) can exchange cell regions (*etales*) not far from realtime.
 
