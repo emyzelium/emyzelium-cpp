@@ -62,8 +62,8 @@ namespace typeAliases {
 using namespace typeAliases;
 
 
-const string VERSION = "0.9.2";
-const string DATE = "2023.10.11";
+const string LIB_VERSION = "0.9.4";
+const string LIB_DATE = "2023.10.31";
 
 enum class EW {
 	Ok 				= 0,
@@ -98,7 +98,6 @@ class Ehypha {
 	friend class Efunguz;
 	
 	zsocket* subsock;
-	zmq_pollitem_t subpollitem;
 	unordered_map<string, Etale> etales;
 
 	void update();
@@ -134,7 +133,6 @@ class Efunguz {
 	unordered_map<string, Ehypha> ehyphae;
 	zcontext* context;
 	zsocket* zapsock;
-	zmq_pollitem_t zappollitem;
 	vector<uint8_t> zap_session_id;
 	zsocket* pubsock;
 

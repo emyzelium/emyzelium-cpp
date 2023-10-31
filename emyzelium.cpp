@@ -31,7 +31,7 @@
  */
 
 /*
- * Source
+ * Library
  */
 
 #include "emyzelium.hpp"
@@ -58,7 +58,6 @@ const char* ZAP_DOMAIN = "emyz";
 const size_t ZAP_SESSION_ID_LEN = 32;
 
 const int DEF_IPV6_STATUS = 1;
-const int DEF_LINGER = 0;
 
 const size_t MAX_PUBLICKEYS_FILE_LINE_LEN = 96;
 
@@ -90,18 +89,12 @@ int zmqe_setsockopt(zsocket* socket, int option_name, const char* option_cstr) {
 }
 
 
-int zmqe_poll_in_now(zmq_pollitem_t* zpi) {
-	return zmq_poll(zpi, 1, 0);
-}
-
-
 void zmqe_send(zsocket* socket, const vector<vector<uint8_t>>& parts) {
 	zmq_msg_t msg;
 	for (size_t i = 0; i < parts.size(); i++) {
 		size_t size = parts[i].size();
-		void* part_data = malloc(size);
-		memcpy(part_data, parts[i].data(), size);
-		zmq_msg_init_data(&msg, part_data, size, [](void* data, void* hint) {free(data);}, NULL);
+		zmq_msg_init_size(&msg, size);
+		memcpy(zmq_msg_data(&msg), parts[i].data(), size);
 		if (zmq_msg_send(&msg, socket, (i + 1) < parts.size() ? ZMQ_SNDMORE : 0) < 0) {
 			zmq_msg_close(&msg);
 		}
@@ -127,6 +120,14 @@ vector<vector<uint8_t>> zmqe_recv(zsocket* socket) {
 	return parts;
 }
 
+int zmqe_poll_in_now(zsocket* socket) {
+	zmq_pollitem_t zpi;
+	zpi.socket = socket;
+	zpi.fd = 0;
+	zpi.events = ZMQ_POLLIN;
+	zpi.revents = 0;
+	return zmq_poll(&zpi, 1, 0);
+}
 
 Etale::Etale(const vector<vector<uint8_t>>& parts, const int64_t t_out, const int64_t t_in, const bool paused)
 : parts {parts}, t_out {t_out}, t_in {t_in}, paused {paused} {
@@ -135,15 +136,11 @@ Etale::Etale(const vector<vector<uint8_t>>& parts, const int64_t t_out, const in
 
 Ehypha::Ehypha(zcontext* context, const string& secretkey, const string& publickey, const string& serverkey, const string& onion, const uint16_t pubsub_port, const uint16_t torproxy_port, const string& torproxy_host) {
 	this->subsock = zmq_socket(context, ZMQ_SUB);
-	zmqe_setsockopt(this->subsock, ZMQ_LINGER, DEF_LINGER);
 	zmqe_setsockopt(this->subsock, ZMQ_CURVE_SECRETKEY, secretkey.c_str());
 	zmqe_setsockopt(this->subsock, ZMQ_CURVE_PUBLICKEY, publickey.c_str());
 	zmqe_setsockopt(this->subsock, ZMQ_CURVE_SERVERKEY, serverkey.c_str());
 	zmqe_setsockopt(this->subsock, ZMQ_SOCKS_PROXY, (torproxy_host + ":" + to_string(torproxy_port)).c_str());
 	zmq_connect(this->subsock, ("tcp://" + onion + ".onion:" + to_string(pubsub_port)).c_str());
-
-	this->subpollitem.socket = this->subsock;
-	this->subpollitem.events = ZMQ_POLLIN;
 }
 
 
@@ -230,7 +227,7 @@ void Ehypha::resume_etales() {
 void Ehypha::update() {
 	int64_t t = time_musec();
 
-	while (zmqe_poll_in_now(& this->subpollitem) > 0) {
+	while (zmqe_poll_in_now(this->subsock) > 0) {
 		auto msg_parts = zmqe_recv(this->subsock);
 		if (msg_parts.size() >= 2) {
 			// 0th is topic, 1st is remote time, rest (optional) is data
@@ -276,14 +273,11 @@ Efunguz::Efunguz(const string& secretkey, const unordered_set<string>& whitelist
 
 	this->context = zmq_ctx_new();
 	zmq_ctx_set(this->context, ZMQ_IPV6, DEF_IPV6_STATUS);
+	zmq_ctx_set(this->context, ZMQ_BLOCKY, 0);
 
 	// At first, REP socket for ZAP auth...
 	this->zapsock = zmq_socket(this->context, ZMQ_REP);
-	zmqe_setsockopt(this->zapsock, ZMQ_LINGER, DEF_LINGER);
 	zmq_bind(this->zapsock, "inproc://zeromq.zap.01");
-
-	this->zappollitem.socket = this->zapsock;
-	this->zappollitem.events = ZMQ_POLLIN;
 
 	random_device randev;
 	this->zap_session_id.assign(ZAP_SESSION_ID_LEN, 0);
@@ -293,7 +287,6 @@ Efunguz::Efunguz(const string& secretkey, const unordered_set<string>& whitelist
 
 	// ..and only then, PUB socket
 	this->pubsock = zmq_socket(this->context, ZMQ_PUB);
-	zmqe_setsockopt(this->pubsock, ZMQ_LINGER, DEF_LINGER);
 	zmqe_setsockopt(this->pubsock, ZMQ_CURVE_SERVER, 1);
 	zmqe_setsockopt(this->pubsock, ZMQ_CURVE_SECRETKEY, this->secretkey.c_str());
 	zmq_setsockopt(this->pubsock, ZMQ_ZAP_DOMAIN, ZAP_DOMAIN, strlen(ZAP_DOMAIN)); // to enable auth, must be non-empty due to ZMQ RFC 27
@@ -392,7 +385,7 @@ void Efunguz::emit_etale(const string& title, const vector<vector<uint8_t>>& par
 
 
 void Efunguz::update() {
-	while (zmqe_poll_in_now(& this->zappollitem) > 0) {
+	while (zmqe_poll_in_now(this->zapsock) > 0) {
 		vector<vector<uint8_t>> request = zmqe_recv(this->zapsock);
 		vector<vector<uint8_t>> reply;
 
@@ -441,7 +434,14 @@ Efunguz::~Efunguz() {
 	zmq_close(this->zapsock);
 
 	zmq_ctx_shutdown(this->context);
-	zmq_ctx_term(this->context);
+	while (zmq_ctx_term(this->context) == -1) {
+		if (zmq_errno() == EINTR) {
+			continue;
+		} else { // EFAULT or what?
+			break;
+		}
+
+	}
 }
 
 

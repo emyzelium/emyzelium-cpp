@@ -1,3 +1,15 @@
+Version 0.9.4 (2023.10.31)
+--------------------------
+
+* Replaced `zmq_msg_init_data()` with `zmq_msg_init_size()`
+
+* `ZMQ_BLOCKY` is set to 0 at once for entire context, instead of `ZMQ_LINGER` for each socket
+
+* Tiny changes
+
+* Added links to Go version
+
+
 Version 0.9.2 (2023.10.11)
 --------------------------
 
