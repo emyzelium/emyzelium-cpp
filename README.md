@@ -2,9 +2,11 @@
 
 is another wrapper around [ZeroMQ](https://zeromq.org/)'s [Publish-Subscribe](https://zeromq.org/socket-api/#publish-subscribe-pattern) messaging pattern with mandatory [Curve](https://rfc.zeromq.org/spec/26/) security and optional [ZAP](https://rfc.zeromq.org/spec/27/) authentication filter, over [Tor](https://torproject.org), through Tor SOCKS proxy, for distributed artificial elife, decision making etc. systems where each peer, identified by its public key, onion address, and port, publishes and updates vectors of vectors of bytes of data under unique topics that other peers subscribe to and receive the respective data.
 
-Requires [C++11 compiler support](https://en.cppreference.com/w/cpp/compiler_support#References), [libzmq](https://github.com/zeromq/libzmq) ([more on build](http://wiki.zeromq.org/build:_start)), and [Tor](https://community.torproject.org/onion-services/setup/install/). Demo also requires [ncursesw](https://packages.ubuntu.com/bionic/libncursesw5-dev).
+Requires [C++11 compiler support](https://en.cppreference.com/w/cpp/compiler_support#References), [libzmq](https://github.com/zeromq/libzmq) ([more on build](http://wiki.zeromq.org/build:_start), but e.g. [`libzmq3-dev` and `libzmq5` packages](https://github.com/zeromq/libzmq#linux) in Linux suffice), and [Tor](https://community.torproject.org/onion-services/setup/install/). Demo also requires [ncursesw](https://packages.ubuntu.com/focal/libncursesw5-dev).
 
 Versions in other languages:
+
+* [Go](https://github.com/emyzelium/emyzelium-go)
 
 * [Python](https://github.com/emyzelium/emyzelium-py)
 
@@ -20,7 +22,7 @@ See also [mycoses](https://en.wikipedia.org/wiki/Fungal_infection).
 
 Let's use Emyzelium to introduce distributiveness into cellular automata, classical [Conway's Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) and its variations. [Once...](https://github.com/XC-Li/Parallel_CellularAutomaton_Wildfire) [more...](http://www.shodor.org/media/content/petascale/materials/UPModules/GameOfLife/Life_Module_Document_pdf.pdf) [once...](https://books.google.com.ua/books?id=QN18DwAAQBAJ&pg=PA403&lpg=PA403) [again...](https://www.semanticscholar.org/paper/A-Distributed-Cellular-Automata-Simulation-on-of-Topa/164c577848b943e460aff91255f348256471faa0)
 
-For the sake of definiteness, Linux with installed C++ compiler, `libzmq5`, `libzmq3-dev`, `libncursesw5`, and `libncursesw5-dev` packages is assumed. But the demo should run under other OSes as well.
+For the sake of definiteness, Linux with installed C++ toolchain, `libzmq5`, `libzmq3-dev`, `libncursesw5`, and `libncursesw5-dev` packages is assumed. But the demo should run under other OSes as well.
 
 ### On single PC, connected to Internet
 
@@ -51,7 +53,7 @@ then check if there are any problems:
 $ systemctl status tor@default
 ```
 
-should show `... active(running) ...`
+should show `... active(running) ...` and `... Bootstrapped 100% (done): Done ...`
 
 Wait a little for 3 specified dirs to appear, and, in each of them, the file `hostname`.
 
@@ -130,10 +132,10 @@ term1$ ./demo Alien
 by
 
 ```shell
-term1$ python3 demo.py Alien
+term1$ ./demo Alien
 ```
 
-from [Emyzelium in Python](https://github.com/emyzelium/emyzelium-py).
+from [Emyzelium in Go](https://github.com/emyzelium/emyzelium-go).
 
 ### On multiple PCs connected to Internet
 
@@ -148,7 +150,7 @@ HiddenServicePort 60847
 
 only onion addresses in `hostname` files will be different and, as before, should be specified as `ALIEN_ONION`, `JOHN_ONION`, `MARY_ONION` values in `demo.cpp`-s; all `_PORT`-s must be `60847`. Also, this time it suffices on each PC to have in `demo.cpp` only the single corresponding `_SECRETKEY`.
 
-After Emyzelium files with accordingly modified `demo.cpp` have been put on these PCs and `demo` executable has been built, do the following:
+After Emyzelium files with accordingly modified `demo.cpp` have been put on these PCs and `demo` executable has been successfully built, do the following:
 
 ```shell
 pc1$ ./demo Alien
@@ -226,7 +228,7 @@ So, *Efunguz*, *Ehypha*, and *Etale* are just fancy names of well known concepts
 
 ---
 
-**Efunguz**, a.k.a. peer, is the mediator between some "realm", represented by your program, and Tor network, represented by ZeroMQ on top of Tor SOCKS proxy, to which it talks. To the former, it simplifies security, (re)connection, and data flow tasks.
+**Efunguz**, a.k.a. peer, is the mediator between some "realm", represented by your C++ program, and Tor network, represented by ZeroMQ on top of Tor SOCKS proxy, to which it talks. To the former, it simplifies security, (re)connection, and data flow tasks.
 
 The simplest way to construct efunguz is
 
@@ -263,7 +265,7 @@ uint16_t that_port = 12345;
 auto& ehypha = get<0>(efunguz.add_ehypha(that_publickey, that_onion, that_port));
 ```
 
-* obtain pointer to ehypha by its publickey via `get_ehypha_ptr()`:
+* obtain pointer to ehypha by its public key via `get_ehypha_ptr()`:
 
 ```cpp
 string that_publickey = "iGxlt)JYh!P9xPCY%BlY4Y]c^<=W)k^$T7GirF[R";
@@ -371,11 +373,11 @@ Here it is bidirectional, but may be unidirectional as well. For this to work, e
 
 **Q.** How reliable Emyzelium is? How secure? Are there backdoors?
 
-**A.** No "audit" has been performed, so... read the source through carefully, it is small enough — C++ version is almost twice smaller than this README. The buck then goes to underlying layers — ZeroMQ, Curve, Tor, TCP/IP etc. Sorry, there is no other way if you trust only yourself of today.
+**A.** No "audit" has been performed, so... read the source through carefully, it is small enough — C++ version is almost twice smaller than this README. The buck then goes to underlying layers — ZeroMQ, Curve, Tor, TCP/IP, BIOS/EFI, hardware etc. Sorry, there is no other way if you trust only yourself of current Planck time unit.
 
 Yes, there are backdoors. No, there are no backdoors.
 
-Do not omit sanity checks of received etales and during their deserialization.
+Do not omit sanity checks of received etales and during their deserialisation.
 
 Do not use keys from demo, generate your own unique pairs.
 
