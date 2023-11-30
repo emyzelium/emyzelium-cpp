@@ -62,8 +62,8 @@ namespace typeAliases {
 using namespace typeAliases;
 
 
-const string LIB_VERSION = "0.9.4";
-const string LIB_DATE = "2023.10.31";
+const string LIB_VERSION = "0.9.6";
+const string LIB_DATE = "2023.11.30";
 
 enum class EW {
 	Ok 				= 0,

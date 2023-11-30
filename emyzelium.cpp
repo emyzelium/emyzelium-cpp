@@ -89,6 +89,14 @@ int zmqe_setsockopt(zsocket* socket, int option_name, const char* option_cstr) {
 }
 
 
+int zmqe_getsockopt_events(zsocket* socket) {
+	int option_value = 0;
+	size_t option_len = sizeof(int);
+	zmq_getsockopt(socket, ZMQ_EVENTS, &option_value, &option_len);
+	return option_value;
+}
+
+
 void zmqe_send(zsocket* socket, const vector<vector<uint8_t>>& parts) {
 	zmq_msg_t msg;
 	for (size_t i = 0; i < parts.size(); i++) {
@@ -120,14 +128,6 @@ vector<vector<uint8_t>> zmqe_recv(zsocket* socket) {
 	return parts;
 }
 
-int zmqe_poll_in_now(zsocket* socket) {
-	zmq_pollitem_t zpi;
-	zpi.socket = socket;
-	zpi.fd = 0;
-	zpi.events = ZMQ_POLLIN;
-	zpi.revents = 0;
-	return zmq_poll(&zpi, 1, 0);
-}
 
 Etale::Etale(const vector<vector<uint8_t>>& parts, const int64_t t_out, const int64_t t_in, const bool paused)
 : parts {parts}, t_out {t_out}, t_in {t_in}, paused {paused} {
@@ -227,7 +227,7 @@ void Ehypha::resume_etales() {
 void Ehypha::update() {
 	int64_t t = time_musec();
 
-	while (zmqe_poll_in_now(this->subsock) > 0) {
+	while (zmqe_getsockopt_events(this->subsock) & ZMQ_POLLIN != 0) {
 		auto msg_parts = zmqe_recv(this->subsock);
 		if (msg_parts.size() >= 2) {
 			// 0th is topic, 1st is remote time, rest (optional) is data
@@ -385,7 +385,7 @@ void Efunguz::emit_etale(const string& title, const vector<vector<uint8_t>>& par
 
 
 void Efunguz::update() {
-	while (zmqe_poll_in_now(this->zapsock) > 0) {
+	while (zmqe_getsockopt_events(this->zapsock) & ZMQ_POLLIN != 0) {
 		vector<vector<uint8_t>> request = zmqe_recv(this->zapsock);
 		vector<vector<uint8_t>> reply;
 
