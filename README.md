@@ -309,9 +309,11 @@ while (!quit) { // main program loop
 }
 ```
 
+* get the count of current accepted incoming connections from other efungi via `in_connections_num()`
+
 See also `Realm_CA::run()` in `demo.cpp`.
 
-*Internally, Efunguz owns ZeroMQ context, PUB socket for etales, and REP socket for ZAP authentication.*
+*Internally, Efunguz owns ZeroMQ context, PUB socket for etales, REP socket for ZAP authentication, and PAIR socket monitoring PUB.*
 
 ---
 

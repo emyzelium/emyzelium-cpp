@@ -14,7 +14,7 @@
  * 
  * emyzelium@protonmail.com
  * 
- * Copyright (c) 2022-2023 Emyzelium caretakers
+ * Copyright (c) 2022-2024 Emyzelium caretakers
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -433,7 +433,7 @@ public:
 				} else {
 					mvaddstrattr(0, 0, "Render OFF");
 				}
-				mvaddstrattr((h >> 1) + 2, 0, string("This realm: \"") + this->name + "'s\" (birth " + set_to_str(this->birth) + ", survival " + set_to_str(this->survival) + "), SLE " + to_str(t - t_last_emit, 1) + ", autoemit (" + to_str(this->autoemit_interval, 1) + ") " + (autoemit ? "ON" : "OFF"));
+				mvaddstrattr((h >> 1) + 2, 0, string("This realm: \"") + this->name + "'s\" (birth " + set_to_str(this->birth) + ", survival " + set_to_str(this->survival) + "), SLE " + to_str(t - t_last_emit, 1) + ", autoemit (" + to_str(this->autoemit_interval, 1) + ") " + (autoemit ? "ON" : "OFF") + ", InConnsN " + to_string(this->efunguz->in_connections_num()));
 				mvaddstrattr((h >> 1) + 3, 0, "Other realms: ");
 				for (int i_other = 0; i_other < this->others.size(); i_other++) {
 					const auto& that = this->others[i_other];

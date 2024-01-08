@@ -14,7 +14,7 @@
  * 
  * emyzelium@protonmail.com
  * 
- * Copyright (c) 2022-2023 Emyzelium caretakers
+ * Copyright (c) 2022-2024 Emyzelium caretakers
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -291,7 +291,15 @@ Efunguz::Efunguz(const string& secretkey, const unordered_set<string>& whitelist
 	zmqe_setsockopt(this->pubsock, ZMQ_CURVE_SECRETKEY, this->secretkey.c_str());
 	zmq_setsockopt(this->pubsock, ZMQ_ZAP_DOMAIN, ZAP_DOMAIN, strlen(ZAP_DOMAIN)); // to enable auth, must be non-empty due to ZMQ RFC 27
 	zmq_setsockopt(this->pubsock, ZMQ_ROUTING_ID, this->zap_session_id.data(), ZAP_SESSION_ID_LEN); // to make sure only this pubsock can pass auth through zapsock; see update()
+
+	// Before binding, attach monitor
+	zmq_socket_monitor(this->pubsock, "inproc://monitor-pub", ZMQ_EVENT_ALL);
+	this->monsock = zmq_socket(this->context, ZMQ_PAIR);
+	zmq_connect(this->monsock, "inproc://monitor-pub");
+
 	zmq_bind(this->pubsock, (string("tcp://*:") + to_string(this->pubsub_port)).c_str());
+
+	this->in_conn_num = 0;
 }
 
 
@@ -424,12 +432,36 @@ void Efunguz::update() {
 	for (auto& keyval : this->ehyphae) {
 		keyval.second.update();
 	}
+
+	while (zmqe_getsockopt_events(this->monsock) & ZMQ_POLLIN != 0) {
+		vector<vector<uint8_t>> event_msg = zmqe_recv(this->monsock);
+		if (event_msg.size() > 0) {
+			if (event_msg[0].size() >= 2) {
+				uint16_t event_num = *((uint16_t *)(event_msg[0].data()));
+				if (event_num & ZMQ_EVENT_ACCEPTED) {
+					this->in_conn_num++;	
+				}
+				if ((event_num & ZMQ_EVENT_DISCONNECTED) && (this->in_conn_num > 0)) {
+					this->in_conn_num--;
+				}
+				
+			}
+			
+		}
+		
+	}
+}
+
+
+uint Efunguz::in_connections_num() {
+	return this->in_conn_num;
 }
 
 
 Efunguz::~Efunguz() {
 	this->ehyphae.clear(); // to close subsock of each ehypha in its destructor before terminating context, to which those sockets belong
 
+	zmq_close(this->monsock);
 	zmq_close(this->pubsock);
 	zmq_close(this->zapsock);
 

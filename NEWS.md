@@ -1,3 +1,9 @@
+Version 0.9.8 (2024.01.08)
+--------------------------
+
+* Added, via socket monitor, the counter of current accepted incoming connections = the number of authorised subscribers = "popularity", and corresponding `in_connections_num()` getter to Efunguz
+
+
 Version 0.9.6 (2023.11.30)
 --------------------------
 

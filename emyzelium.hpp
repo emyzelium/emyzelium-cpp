@@ -14,7 +14,7 @@
  * 
  * emyzelium@protonmail.com
  * 
- * Copyright (c) 2022-2023 Emyzelium caretakers
+ * Copyright (c) 2022-2024 Emyzelium caretakers
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,8 +62,8 @@ namespace typeAliases {
 using namespace typeAliases;
 
 
-const string LIB_VERSION = "0.9.6";
-const string LIB_DATE = "2023.11.30";
+const string LIB_VERSION = "0.9.8";
+const string LIB_DATE = "2024.01.08";
 
 enum class EW {
 	Ok 				= 0,
@@ -135,6 +135,8 @@ class Efunguz {
 	zsocket* zapsock;
 	vector<uint8_t> zap_session_id;
 	zsocket* pubsock;
+	zsocket* monsock;
+	uint in_conn_num;
 
 public:
 	// Owns context and sockets, so cannot be copied
@@ -155,6 +157,8 @@ public:
 	void emit_etale(const string& title, const vector<vector<uint8_t>>& parts);
 
 	void update();
+
+	uint in_connections_num();
 
 	~Efunguz();
 };
