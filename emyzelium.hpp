@@ -62,8 +62,8 @@ namespace typeAliases {
 using namespace typeAliases;
 
 
-const string LIB_VERSION = "0.9.8";
-const string LIB_DATE = "2024.01.08";
+const string LIB_VERSION = "0.9.10";
+const string LIB_DATE = "2024.02.02";
 
 enum class EW {
 	Ok 				= 0,
@@ -136,7 +136,9 @@ class Efunguz {
 	vector<uint8_t> zap_session_id;
 	zsocket* pubsock;
 	zsocket* monsock;
-	uint in_conn_num;
+	uint64_t in_accepted_num;
+	uint64_t in_handshake_succeeded_num;
+	uint64_t in_disconnected_num;
 
 public:
 	// Owns context and sockets, so cannot be copied
@@ -158,7 +160,9 @@ public:
 
 	void update();
 
-	uint in_connections_num();
+	uint64_t in_attempted_num();
+	uint64_t in_permitted_num();
+	uint64_t in_absorbing_num();
 
 	~Efunguz();
 };

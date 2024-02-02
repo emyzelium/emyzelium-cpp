@@ -299,7 +299,9 @@ Efunguz::Efunguz(const string& secretkey, const unordered_set<string>& whitelist
 
 	zmq_bind(this->pubsock, (string("tcp://*:") + to_string(this->pubsub_port)).c_str());
 
-	this->in_conn_num = 0;
+	this->in_accepted_num = 0;
+	this->in_handshake_succeeded_num = 0;
+	this->in_disconnected_num = 0;
 }
 
 
@@ -439,12 +441,15 @@ void Efunguz::update() {
 			if (event_msg[0].size() >= 2) {
 				uint16_t event_num = *((uint16_t *)(event_msg[0].data()));
 				if (event_num & ZMQ_EVENT_ACCEPTED) {
-					this->in_conn_num++;	
+					this->in_accepted_num++;	
 				}
-				if ((event_num & ZMQ_EVENT_DISCONNECTED) && (this->in_conn_num > 0)) {
-					this->in_conn_num--;
+				if (event_num & ZMQ_EVENT_HANDSHAKE_SUCCEEDED) {
+					this->in_handshake_succeeded_num++;
 				}
-				
+				if (event_num & ZMQ_EVENT_DISCONNECTED) {
+					this->in_disconnected_num++;
+				}
+
 			}
 			
 		}
@@ -453,8 +458,18 @@ void Efunguz::update() {
 }
 
 
-uint Efunguz::in_connections_num() {
-	return this->in_conn_num;
+uint64_t Efunguz::in_attempted_num() {
+	return this->in_accepted_num;
+}
+
+
+uint64_t Efunguz::in_permitted_num() {
+	return this->in_handshake_succeeded_num;
+}
+
+
+uint64_t Efunguz::in_absorbing_num() {
+	return (this->in_accepted_num >= this->in_disconnected_num) ? (this->in_accepted_num - this->in_disconnected_num) : 0; // may temporarily exceed number of actually subscribed peers, until disconnection due to failed auth
 }
 
 

@@ -309,7 +309,15 @@ while (!quit) { // main program loop
 }
 ```
 
-* get the count of current accepted incoming connections from other efungi via `in_connections_num()`
+* get the *current* count (hereafter denoted by `IN1`) of successfully authenticated incoming connections from other efungi, via `in_absorbing_num()`
+
+* get the *total* count (`IN2`) of successfully authenticated incoming connections, via `in_permitted_num()`
+
+* get the total count (`IN3`) of attempted incoming connections, via `in_attempted_num()`
+
+Most of the time, `IN1` ≤ `IN2` because some efungi might have disconnected, and `IN2` ≤ `IN3` because some efungi might have not even passed authentication filter.
+
+---
 
 See also `Realm_CA::run()` in `demo.cpp`.
 
